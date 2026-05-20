@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Scanner Código de Barras</title>
+
+  <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7efff;
+      margin: 0;
+      padding: 18px;
+      color: #2b2b2b;
+    }
+
+    .contenedor {
+      max-width: 520px;
+      margin: auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 22px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.14);
+    }
+
+    h1 {
+      text-align: center;
+      color: #7b2cbf;
+      margin-bottom: 5px;
+    }
+
+    .subtitulo {
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 18px;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 16px;
+      background: #000;
+      margin-top: 12px;
+      display: none;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      font-weight: bold;
+      color: #3c096c;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 13px;
+      margin-top: 6px;
+      border: 1px solid #cfcfcf;
+      border-radius: 12px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 85px;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-principal {
+      background: #9d4edd;
+      color: white;
+    }
+
+    .btn-secundario {
+      background: #e0c3fc;
+      color: #3c096c;
+    }
+
+    .btn-error {
+      background: #ffccd5;
+      color: #9d0208;
+    }
+
+    .mensaje {
+      margin-top: 12px;
+      text-align: center;
+      font-weight: bold;
+      min-height: 24px;
+    }
+
+    .ok {
+      color: #168aad;
+    }
+
+    .error {
+      color: #d00000;
+    }
+
+    .preview {
+      background: #faf7ff;
+      border: 1px dashed #b185db;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 18px;
+      font-size: 14px;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+    }
+
+    .nota {
+      font-size: 12px;
+      color: #666;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="contenedor">
+    <h1>📷 Scanner</h1>
+    <p class="subtitulo">Escanea código de barras y captura datos de venta</p>
+
+    <button class="btn-principal" onclick="iniciarScanner()">
+      Abrir cámara y escanear
+    </button>
+
+    <video id="video"></video>
+
+    <button class="btn-error" onclick="marcarErroneo()">
+      No se pudo escanear / Marcar ERRÓNEO
+    </button>
+
+    <label>Código de barras detectado</label>
+    <input id="codigoBarras" placeholder="Aquí aparecerán los dígitos o ERRÓNEO" readonly />
+
+    <label>Últimos 4 dígitos de tarjeta</label>
+    <input
+      id="ultimos4"
+      inputmode="numeric"
+      maxlength="4"
+      placeholder="Ej. 4821"
+      oninput="soloNumeros(this, 4)"
+    />
+
+    <label>Folio</label>
+    <input
+      id="folio"
+      inputmode="numeric"
+      placeholder="Ej. 17753126"
+      oninput="soloNumeros(this, 20)"
+    />
+
+    <label>Determinante</label>
+    <input
+      id="determinante"
+      inputmode="numeric"
+      maxlength="4"
+      placeholder="Solo 4 números. Ej. 0013"
+      oninput="soloNumeros(this, 4)"
+    />
+    <div class="nota">Debe tener exactamente 4 números.</div>
+
+    <label>Fecha de venta</label>
+    <input id="fechaVenta" type="date" />
+
+    <label>Comentarios</label>
+    <textarea id="comentarios" placeholder="Escribe observaciones si aplica"></textarea>
+
+    <button class="btn-principal" onclick="generarRegistro()">
+      Generar registro
+    </button>
+
+    <button class="btn-secundario" onclick="copiarRegistro()">
+      Copiar registro
+    </button>
+
+    <button class="btn-secundario" onclick="descargarCSV()">
+      Descargar CSV
+    </button>
+
+    <button class="btn-secundario" onclick="limpiarFormulario()">
+      Nueva captura
+    </button>
+
+    <div id="mensaje" class="mensaje"></div>
+
+    <div id="preview" class="preview">
+      Aquí aparecerá el registro generado.
+    </div>
+  </div>
+
+  <script>
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+
+    let registroActual = null;
+    let temporizadorScanner = null;
+
+    function mostrarMensaje(texto, tipo = "") {
+      const mensaje = document.getElementById("mensaje");
+      mensaje.textContent = texto;
+      mensaje.className = "mensaje " + tipo;
+    }
+
+    function soloNumeros(input, max) {
+      input.value = input.value.replace(/\D/g, "").slice(0, max);
+    }
+
+    async function iniciarScanner() {
+      const video = document.getElementById("video");
+      const codigoBarras = document.getElementById("codigoBarras");
+
+      codigoBarras.value = "";
+      video.style.display = "block";
+
+      mostrarMensaje("Abriendo cámara... acepta el permiso.", "");
+
+      try {
+        const dispositivos = await codeReader.listVideoInputDevices();
+
+        if (!dispositivos || dispositivos.length === 0) {
+          mostrarMensaje("No se encontró cámara. Se marcará como ERRÓNEO.", "error");
+          codigoBarras.value = "ERRÓNEO";
+          return;
+        }
+
+        const camaraTrasera =
+          dispositivos.find(d =>
+            d.label.toLowerCase().includes("back") ||
+            d.label.toLowerCase().includes("environment") ||
+            d.label.toLowerCase().includes("trasera")
+          ) || dispositivos[0];
+
+        let detectado = false;
+
+        temporizadorScanner = setTimeout(() => {
+          if (!detectado) {
+            detenerScanner();
+            codigoBarras.value = "ERRÓNEO";
+            mostrarMensaje("No se pudo escanear. Código marcado como ERRÓNEO.", "error");
+          }
+        }, 15000);
+
+        await codeReader.decodeFromVideoDevice(
+          camaraTrasera.deviceId,
+          video,
+          (result, error) => {
+            if (result) {
+              detectado = true;
+              clearTimeout(temporizadorScanner);
+
+              codigoBarras.value = result.getText();
+
+              mostrarMensaje("✅ Código detectado correctamente.", "ok");
+              detenerScanner();
+            }
+          }
+        );
+
+      } catch (error) {
+        console.error(error);
+        codigoBarras.value = "ERRÓNEO";
+        mostrarMensaje("No se pudo abrir la cámara. Revisa permisos o usa la liga HTTPS.", "error");
+      }
+    }
+
+    function detenerScanner() {
+      try {
+        codeReader.reset();
+        const video = document.getElementById("video");
+        video.style.display = "none";
+
+        if (temporizadorScanner) {
+          clearTimeout(temporizadorScanner);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function marcarErroneo() {
+      detenerScanner();
+      document.getElementById("codigoBarras").value = "ERRÓNEO";
+      mostrarMensaje("Código marcado como ERRÓNEO.", "error");
+    }
+
+    function generarRegistro() {
+      const codigoBarras = document.getElementById("codigoBarras").value.trim();
+      const ultimos4 = document.getElementById("ultimos4").value.trim();
+      const folio = document.getElementById("folio").value.trim();
+      const determinante = document.getElementById("determinante").value.trim();
+      const fechaVenta = document.getElementById("fechaVenta").value;
+      const comentarios = document.getElementById("comentarios").value.trim();
+
+      if (!codigoBarras) {
+        mostrarMensaje("Falta escanear el código o marcarlo como ERRÓNEO.", "error");
+        return;
+      }
+
+      if (!/^\d{4}$/.test(ultimos4)) {
+        mostrarMensaje("Los últimos dígitos de tarjeta deben ser exactamente 4 números.", "error");
+        return;
+      }
+
+      if (!folio) {
+        mostrarMensaje("Falta capturar el folio.", "error");
+        return;
+      }
+
+      if (!/^\d{4}$/.test(determinante)) {
+        mostrarMensaje("La determinante debe tener exactamente 4 números.", "error");
+        return;
+      }
+
+      if (!fechaVenta) {
+        mostrarMensaje("Falta seleccionar la fecha de venta.", "error");
+        return;
+      }
+
+      registroActual = {
+        fecha_captura: new Date().toLocaleString("es-MX"),
+        codigo_barras: codigoBarras,
+        ultimos_4_tarjeta: ultimos4,
+        folio: folio,
+        determinante: determinante,
+        fecha_venta: fechaVenta,
+        comentarios: comentarios
+      };
+
+      const texto =
+`FECHA CAPTURA: ${registroActual.fecha_captura}
+CÓDIGO DE BARRAS: ${registroActual.codigo_barras}
+ÚLTIMOS 4 TARJETA: ${registroActual.ultimos_4_tarjeta}
+FOLIO: ${registroActual.folio}
+DETERMINANTE: ${registroActual.determinante}
+FECHA DE VENTA: ${registroActual.fecha_venta}
+COMENTARIOS: ${registroActual.comentarios || "-"}`;
+
+      document.getElementById("preview").textContent = texto;
+      mostrarMensaje("✅ Registro generado correctamente.", "ok");
+    }
+
+    async function copiarRegistro() {
+      if (!registroActual) {
+        generarRegistro();
+      }
+
+      if (!registroActual) return;
+
+      const texto = document.getElementById("preview").textContent;
+
+      try {
+        await navigator.clipboard.writeText(texto);
+        mostrarMensaje("📋 Registro copiado.", "ok");
+      } catch (error) {
+        mostrarMensaje("No se pudo copiar. Selecciona el texto manualmente.", "error");
+      }
+    }
+
+    function descargarCSV() {
+      if (!registroActual) {
+        generarRegistro();
+      }
+
+      if (!registroActual) return;
+
+      const encabezados = [
+        "FECHA_CAPTURA",
+        "CODIGO_BARRAS",
+        "ULTIMOS_4_TARJETA",
+        "FOLIO",
+        "DETERMINANTE",
+        "FECHA_VENTA",
+        "COMENTARIOS"
+      ];
+
+      const valores = [
+        registroActual.fecha_captura,
+        registroActual.codigo_barras,
+        registroActual.ultimos_4_tarjeta,
+        registroActual.folio,
+        registroActual.determinante,
+        registroActual.fecha_venta,
+        registroActual.comentarios
+      ];
+
+      const limpiarCSV = valor => {
+        const texto = String(valor || "").replace(/"/g, '""');
+        return `"${texto}"`;
+      };
+
+      const contenidoCSV =
+        encabezados.join(",") + "\n" +
+        valores.map(limpiarCSV).join(",");
+
+      const blob = new Blob([contenidoCSV], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "captura_codigo_barras.csv";
+      a.click();
+
+      URL.revokeObjectURL(url);
+
+      mostrarMensaje("✅ CSV descargado.", "ok");
+    }
+
+    function limpiarFormulario() {
+      detenerScanner();
+
+      document.getElementById("codigoBarras").value = "";
+      document.getElementById("ultimos4").value = "";
+      document.getElementById("folio").value = "";
+      document.getElementById("determinante").value = "";
+      document.getElementById("fechaVenta").value = "";
+      document.getElementById("comentarios").value = "";
+
+      registroActual = null;
+
+      document.getElementById("preview").textContent = "Aquí aparecerá el registro generado.";
+      mostrarMensaje("Lista para una nueva captura.", "ok");
+    }
+  </script>
+</body>
+</html>
