@@ -209,6 +209,12 @@
     let registroActual = null;
     let temporizadorScanner = null;
 
+    document.addEventListener("DOMContentLoaded", function () {
+      const fechaVenta = document.getElementById("fechaVenta");
+      const hoy = new Date().toISOString().split("T")[0];
+      fechaVenta.value = hoy;
+    });
+
     function mostrarMensaje(texto, tipo = "") {
       const mensaje = document.getElementById("mensaje");
       mensaje.textContent = texto;
@@ -273,7 +279,7 @@
       } catch (error) {
         console.error(error);
         codigoBarras.value = "ERRÓNEO";
-        mostrarMensaje("No se pudo abrir la cámara. Revisa permisos o usa la liga HTTPS.", "error");
+        mostrarMensaje("No se pudo abrir la cámara. Revisa permisos o abre la liga HTTPS.", "error");
       }
     }
 
@@ -311,7 +317,7 @@
       }
 
       if (!/^\d{4}$/.test(ultimos4)) {
-        mostrarMensaje("Los últimos dígitos de tarjeta deben ser exactamente 4 números.", "error");
+        mostrarMensaje("Los últimos 4 dígitos de tarjeta deben ser exactamente 4 números.", "error");
         return null;
       }
 
@@ -368,7 +374,7 @@ COMENTARIOS: ${registro.comentarios || "-"}`;
     }
 
     function guardarEnGoogleSheets() {
-      if (SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbwIWTnKfhjK8xfZnnEAR0NWsyBVVD30c6VfL-hU2Z3gqFh8iSmWM15AcK4-jwaHvvzEkg/exec")) {
+      if (!SCRIPT_URL || SCRIPT_URL.includes("PEGA_AQUI")) {
         mostrarMensaje("Falta pegar la URL de Apps Script en el código.", "error");
         return;
       }
@@ -406,7 +412,7 @@ COMENTARIOS: ${registro.comentarios || "-"}`;
       form.submit();
       document.body.removeChild(form);
 
-      mostrarMensaje("✅ Registro enviado a Google Sheets.", "ok");
+      mostrarMensaje("✅ Registro enviado a Google Sheets. Revisa la pestaña CAPTURAS.", "ok");
     }
 
     async function copiarRegistro() {
@@ -432,7 +438,10 @@ COMENTARIOS: ${registro.comentarios || "-"}`;
       document.getElementById("ultimos4").value = "";
       document.getElementById("folio").value = "";
       document.getElementById("determinante").value = "";
-      document.getElementById("fechaVenta").value = "";
+
+      const hoy = new Date().toISOString().split("T")[0];
+      document.getElementById("fechaVenta").value = hoy;
+
       document.getElementById("comentarios").value = "";
 
       registroActual = null;
