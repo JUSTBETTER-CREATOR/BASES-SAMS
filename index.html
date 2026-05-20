@@ -132,7 +132,7 @@
 <body>
   <div class="contenedor">
     <h1>📷 Scanner</h1>
-    <p class="subtitulo">Escanea código de barras y captura datos de venta</p>
+    <p class="subtitulo">Escanea código de barras y guarda directo en Google Sheets</p>
 
     <button class="btn-principal" onclick="iniciarScanner()">
       Abrir cámara y escanear
@@ -180,16 +180,12 @@
     <label>Comentarios</label>
     <textarea id="comentarios" placeholder="Escribe observaciones si aplica"></textarea>
 
-    <button class="btn-principal" onclick="generarRegistro()">
-      Generar registro
+    <button class="btn-principal" onclick="guardarEnGoogleSheets()">
+      Guardar en Google Sheets
     </button>
 
     <button class="btn-secundario" onclick="copiarRegistro()">
-      Copiar registro
-    </button>
-
-    <button class="btn-secundario" onclick="descargarCSV()">
-      Descargar CSV
+      Copiar registro sin tarjeta
     </button>
 
     <button class="btn-secundario" onclick="limpiarFormulario()">
@@ -203,7 +199,11 @@
     </div>
   </div>
 
+  <iframe name="iframeOculto" style="display:none;"></iframe>
+
   <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIRKoysvDw8-Lpe3wHEYCDGH2_zlqav4_6tfKS9Lqb_ROa0fDyUYG61MlTPyTnqsvJpw/exec";
+
     const codeReader = new ZXing.BrowserMultiFormatReader();
 
     let registroActual = null;
@@ -297,7 +297,7 @@
       mostrarMensaje("Código marcado como ERRÓNEO.", "error");
     }
 
-    function generarRegistro() {
+    function validarFormulario() {
       const codigoBarras = document.getElementById("codigoBarras").value.trim();
       const ultimos4 = document.getElementById("ultimos4").value.trim();
       const folio = document.getElementById("folio").value.trim();
@@ -307,30 +307,30 @@
 
       if (!codigoBarras) {
         mostrarMensaje("Falta escanear el código o marcarlo como ERRÓNEO.", "error");
-        return;
+        return null;
       }
 
       if (!/^\d{4}$/.test(ultimos4)) {
         mostrarMensaje("Los últimos dígitos de tarjeta deben ser exactamente 4 números.", "error");
-        return;
+        return null;
       }
 
       if (!folio) {
         mostrarMensaje("Falta capturar el folio.", "error");
-        return;
+        return null;
       }
 
       if (!/^\d{4}$/.test(determinante)) {
         mostrarMensaje("La determinante debe tener exactamente 4 números.", "error");
-        return;
+        return null;
       }
 
       if (!fechaVenta) {
         mostrarMensaje("Falta seleccionar la fecha de venta.", "error");
-        return;
+        return null;
       }
 
-      registroActual = {
+      return {
         fecha_captura: new Date().toLocaleString("es-MX"),
         codigo_barras: codigoBarras,
         ultimos_4_tarjeta: ultimos4,
@@ -339,84 +339,90 @@
         fecha_venta: fechaVenta,
         comentarios: comentarios
       };
+    }
 
-      const texto =
-`FECHA CAPTURA: ${registroActual.fecha_captura}
-CÓDIGO DE BARRAS: ${registroActual.codigo_barras}
-ÚLTIMOS 4 TARJETA: ${registroActual.ultimos_4_tarjeta}
-FOLIO: ${registroActual.folio}
-DETERMINANTE: ${registroActual.determinante}
-FECHA DE VENTA: ${registroActual.fecha_venta}
-COMENTARIOS: ${registroActual.comentarios || "-"}`;
+    function actualizarPreview(registro, incluirTarjeta = true) {
+      let texto = "";
+
+      if (incluirTarjeta) {
+        texto =
+`FECHA CAPTURA: ${registro.fecha_captura}
+CÓDIGO DE BARRAS: ${registro.codigo_barras}
+ÚLTIMOS 4 TARJETA: ${registro.ultimos_4_tarjeta}
+FOLIO: ${registro.folio}
+DETERMINANTE: ${registro.determinante}
+FECHA DE VENTA: ${registro.fecha_venta}
+COMENTARIOS: ${registro.comentarios || "-"}`;
+      } else {
+        texto =
+`FECHA CAPTURA: ${registro.fecha_captura}
+CÓDIGO DE BARRAS: ${registro.codigo_barras}
+FOLIO: ${registro.folio}
+DETERMINANTE: ${registro.determinante}
+FECHA DE VENTA: ${registro.fecha_venta}
+COMENTARIOS: ${registro.comentarios || "-"}`;
+      }
 
       document.getElementById("preview").textContent = texto;
-      mostrarMensaje("✅ Registro generado correctamente.", "ok");
+      return texto;
+    }
+
+    function guardarEnGoogleSheets() {
+      if (SCRIPT_URL.includes("PEGA_AQUI")) {
+        mostrarMensaje("Falta pegar la URL de Apps Script en el código.", "error");
+        return;
+      }
+
+      const registro = validarFormulario();
+      if (!registro) return;
+
+      registroActual = registro;
+      actualizarPreview(registro, true);
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = SCRIPT_URL;
+      form.target = "iframeOculto";
+      form.style.display = "none";
+
+      const campos = {
+        codigo_barras: registro.codigo_barras,
+        ultimos4: registro.ultimos_4_tarjeta,
+        folio: registro.folio,
+        determinante: registro.determinante,
+        fecha_venta: registro.fecha_venta,
+        comentarios: registro.comentarios
+      };
+
+      Object.keys(campos).forEach(nombre => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = nombre;
+        input.value = campos[nombre];
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+
+      mostrarMensaje("✅ Registro enviado a Google Sheets.", "ok");
     }
 
     async function copiarRegistro() {
-      if (!registroActual) {
-        generarRegistro();
-      }
+      const registro = validarFormulario();
+      if (!registro) return;
 
-      if (!registroActual) return;
+      registroActual = registro;
 
-      const texto = document.getElementById("preview").textContent;
+      const textoSinTarjeta = actualizarPreview(registro, false);
 
       try {
-        await navigator.clipboard.writeText(texto);
-        mostrarMensaje("📋 Registro copiado.", "ok");
+        await navigator.clipboard.writeText(textoSinTarjeta);
+        mostrarMensaje("📋 Registro copiado sin últimos 4 de tarjeta.", "ok");
       } catch (error) {
         mostrarMensaje("No se pudo copiar. Selecciona el texto manualmente.", "error");
       }
-    }
-
-    function descargarCSV() {
-      if (!registroActual) {
-        generarRegistro();
-      }
-
-      if (!registroActual) return;
-
-      const encabezados = [
-        "FECHA_CAPTURA",
-        "CODIGO_BARRAS",
-        "ULTIMOS_4_TARJETA",
-        "FOLIO",
-        "DETERMINANTE",
-        "FECHA_VENTA",
-        "COMENTARIOS"
-      ];
-
-      const valores = [
-        registroActual.fecha_captura,
-        registroActual.codigo_barras,
-        registroActual.ultimos_4_tarjeta,
-        registroActual.folio,
-        registroActual.determinante,
-        registroActual.fecha_venta,
-        registroActual.comentarios
-      ];
-
-      const limpiarCSV = valor => {
-        const texto = String(valor || "").replace(/"/g, '""');
-        return `"${texto}"`;
-      };
-
-      const contenidoCSV =
-        encabezados.join(",") + "\n" +
-        valores.map(limpiarCSV).join(",");
-
-      const blob = new Blob([contenidoCSV], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "captura_codigo_barras.csv";
-      a.click();
-
-      URL.revokeObjectURL(url);
-
-      mostrarMensaje("✅ CSV descargado.", "ok");
     }
 
     function limpiarFormulario() {
