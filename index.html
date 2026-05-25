@@ -1,454 +1,211 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+const NOMBRE_HOJA_CAPTURAS = "CAPTURAS";
+const NOMBRE_HOJA_USUARIOS = "USUARIOS";
+const NOMBRE_CARPETA_EVIDENCIAS = "EVIDENCIAS_SCANNER";
 
-  <title>Scanner Código de Barras</title>
+function doGet(e) {
+  const accion = e.parameter.accion;
 
-  <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+  if (accion === "buscar_pandape") {
+    const pandape = String(e.parameter.pandape || "").trim().toUpperCase();
+    const callback = e.parameter.callback;
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f7efff;
-      margin: 0;
-      padding: 18px;
-      color: #2b2b2b;
+    const respuesta = buscarPandape(pandape);
+    const json = JSON.stringify(respuesta);
+
+    if (callback) {
+      return ContentService
+        .createTextOutput(callback + "(" + json + ")")
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
 
-    .contenedor {
-      max-width: 520px;
-      margin: auto;
-      background: #ffffff;
-      padding: 20px;
-      border-radius: 22px;
-      box-shadow: 0 10px 28px rgba(0,0,0,0.14);
-    }
+    return ContentService
+      .createTextOutput(json)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 
-    h1 {
-      text-align: center;
-      color: #7b2cbf;
-      margin-bottom: 5px;
-    }
+  return ContentService.createTextOutput("OK");
+}
 
-    .subtitulo {
-      text-align: center;
-      color: #555;
-      font-size: 14px;
-      margin-bottom: 18px;
-    }
+function buscarPandape(pandape) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hoja = ss.getSheetByName(NOMBRE_HOJA_USUARIOS);
 
-    video {
-      width: 100%;
-      border-radius: 16px;
-      background: #000;
-      margin-top: 12px;
-      display: none;
-    }
+  if (!hoja) {
+    return {
+      encontrado: false,
+      mensaje: "No existe la hoja USUARIOS"
+    };
+  }
 
-    label {
-      display: block;
-      margin-top: 14px;
-      font-weight: bold;
-      color: #3c096c;
-    }
+  const datos = hoja.getDataRange().getValues();
 
-    input, textarea {
-      width: 100%;
-      padding: 13px;
-      margin-top: 6px;
-      border: 1px solid #cfcfcf;
-      border-radius: 12px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
+  if (datos.length < 2) {
+    return {
+      encontrado: false,
+      mensaje: "La hoja USUARIOS no tiene datos"
+    };
+  }
 
-    textarea {
-      min-height: 85px;
-      resize: vertical;
-    }
+  const encabezados = datos[0].map(e => normalizarTexto(e));
 
-    button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 12px;
-      border: none;
-      border-radius: 14px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+  let idxPandape = encabezados.findIndex(e => e === "PANDAPE");
+  let idxNombre = encabezados.findIndex(e => e === "NOMBRE_COMPLETO" || e === "NOMBRE COMPLETO" || e.includes("NOMBRE"));
 
-    .btn-principal {
-      background: #9d4edd;
-      color: white;
-    }
+  if (idxPandape === -1) idxPandape = 0;
+  if (idxNombre === -1) idxNombre = 1;
 
-    .btn-secundario {
-      background: #e0c3fc;
-      color: #3c096c;
-    }
+  for (let i = 1; i < datos.length; i++) {
+    const pandapeHoja = String(datos[i][idxPandape] || "").trim().toUpperCase();
+    const nombreCompleto = String(datos[i][idxNombre] || "").trim();
 
-    .btn-error {
-      background: #ffccd5;
-      color: #9d0208;
-    }
-
-    .mensaje {
-      margin-top: 12px;
-      text-align: center;
-      font-weight: bold;
-      min-height: 24px;
-    }
-
-    .ok {
-      color: #168aad;
-    }
-
-    .error {
-      color: #d00000;
-    }
-
-    .preview {
-      background: #faf7ff;
-      border: 1px dashed #b185db;
-      border-radius: 14px;
-      padding: 12px;
-      margin-top: 18px;
-      font-size: 14px;
-      white-space: pre-wrap;
-      overflow-wrap: break-word;
-    }
-
-    .nota {
-      font-size: 12px;
-      color: #666;
-      margin-top: 6px;
-    }
-  </style>
-</head>
-
-<body>
-  <div class="contenedor">
-    <h1>📷 Scanner</h1>
-    <p class="subtitulo">Escanea código de barras y guarda directo en Google Sheets</p>
-
-    <button class="btn-principal" onclick="iniciarScanner()">
-      Abrir cámara y escanear
-    </button>
-
-    <video id="video"></video>
-
-    <button class="btn-error" onclick="marcarErroneo()">
-      No se pudo escanear / Marcar ERRÓNEO
-    </button>
-
-    <label>Código de barras detectado</label>
-    <input id="codigoBarras" placeholder="Aquí aparecerán los dígitos o ERRÓNEO" readonly />
-
-    <label>Últimos 4 dígitos de tarjeta</label>
-    <input
-      id="ultimos4"
-      inputmode="numeric"
-      maxlength="4"
-      placeholder="Ej. 4821"
-      oninput="soloNumeros(this, 4)"
-    />
-
-    <label>Folio</label>
-    <input
-      id="folio"
-      inputmode="numeric"
-      placeholder="Ej. 17753126"
-      oninput="soloNumeros(this, 20)"
-    />
-
-    <label>Determinante</label>
-    <input
-      id="determinante"
-      inputmode="numeric"
-      maxlength="4"
-      placeholder="Solo 4 números. Ej. 0013"
-      oninput="soloNumeros(this, 4)"
-    />
-    <div class="nota">Debe tener exactamente 4 números.</div>
-
-    <label>Fecha de venta</label>
-    <input id="fechaVenta" type="date" />
-
-    <label>Comentarios</label>
-    <textarea id="comentarios" placeholder="Escribe observaciones si aplica"></textarea>
-
-    <button class="btn-principal" onclick="guardarEnGoogleSheets()">
-      Guardar en Google Sheets
-    </button>
-
-    <button class="btn-secundario" onclick="copiarRegistro()">
-      Copiar registro sin tarjeta
-    </button>
-
-    <button class="btn-secundario" onclick="limpiarFormulario()">
-      Nueva captura
-    </button>
-
-    <div id="mensaje" class="mensaje"></div>
-
-    <div id="preview" class="preview">
-      Aquí aparecerá el registro generado.
-    </div>
-  </div>
-
-  <iframe name="iframeOculto" style="display:none;"></iframe>
-
-  <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzIRKoysvDw8-Lpe3wHEYCDGH2_zlqav4_6tfKS9Lqb_ROa0fDyUYG61MlTPyTnqsvJpw/exec";
-
-    const codeReader = new ZXing.BrowserMultiFormatReader();
-
-    let registroActual = null;
-    let temporizadorScanner = null;
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const fechaVenta = document.getElementById("fechaVenta");
-      const hoy = new Date().toISOString().split("T")[0];
-      fechaVenta.value = hoy;
-    });
-
-    function mostrarMensaje(texto, tipo = "") {
-      const mensaje = document.getElementById("mensaje");
-      mensaje.textContent = texto;
-      mensaje.className = "mensaje " + tipo;
-    }
-
-    function soloNumeros(input, max) {
-      input.value = input.value.replace(/\D/g, "").slice(0, max);
-    }
-
-    async function iniciarScanner() {
-      const video = document.getElementById("video");
-      const codigoBarras = document.getElementById("codigoBarras");
-
-      codigoBarras.value = "";
-      video.style.display = "block";
-
-      mostrarMensaje("Abriendo cámara... acepta el permiso.", "");
-
-      try {
-        const dispositivos = await codeReader.listVideoInputDevices();
-
-        if (!dispositivos || dispositivos.length === 0) {
-          mostrarMensaje("No se encontró cámara. Se marcará como ERRÓNEO.", "error");
-          codigoBarras.value = "ERRÓNEO";
-          return;
-        }
-
-        const camaraTrasera =
-          dispositivos.find(d =>
-            d.label.toLowerCase().includes("back") ||
-            d.label.toLowerCase().includes("environment") ||
-            d.label.toLowerCase().includes("trasera")
-          ) || dispositivos[0];
-
-        let detectado = false;
-
-        temporizadorScanner = setTimeout(() => {
-          if (!detectado) {
-            detenerScanner();
-            codigoBarras.value = "ERRÓNEO";
-            mostrarMensaje("No se pudo escanear. Código marcado como ERRÓNEO.", "error");
-          }
-        }, 15000);
-
-        await codeReader.decodeFromVideoDevice(
-          camaraTrasera.deviceId,
-          video,
-          (result, error) => {
-            if (result) {
-              detectado = true;
-              clearTimeout(temporizadorScanner);
-
-              codigoBarras.value = result.getText();
-
-              mostrarMensaje("✅ Código detectado correctamente.", "ok");
-              detenerScanner();
-            }
-          }
-        );
-
-      } catch (error) {
-        console.error(error);
-        codigoBarras.value = "ERRÓNEO";
-        mostrarMensaje("No se pudo abrir la cámara. Revisa permisos o abre la liga HTTPS.", "error");
-      }
-    }
-
-    function detenerScanner() {
-      try {
-        codeReader.reset();
-        const video = document.getElementById("video");
-        video.style.display = "none";
-
-        if (temporizadorScanner) {
-          clearTimeout(temporizadorScanner);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    function marcarErroneo() {
-      detenerScanner();
-      document.getElementById("codigoBarras").value = "ERRÓNEO";
-      mostrarMensaje("Código marcado como ERRÓNEO.", "error");
-    }
-
-    function validarFormulario() {
-      const codigoBarras = document.getElementById("codigoBarras").value.trim();
-      const ultimos4 = document.getElementById("ultimos4").value.trim();
-      const folio = document.getElementById("folio").value.trim();
-      const determinante = document.getElementById("determinante").value.trim();
-      const fechaVenta = document.getElementById("fechaVenta").value;
-      const comentarios = document.getElementById("comentarios").value.trim();
-
-      if (!codigoBarras) {
-        mostrarMensaje("Falta escanear el código o marcarlo como ERRÓNEO.", "error");
-        return null;
-      }
-
-      if (!/^\d{4}$/.test(ultimos4)) {
-        mostrarMensaje("Los últimos 4 dígitos de tarjeta deben ser exactamente 4 números.", "error");
-        return null;
-      }
-
-      if (!folio) {
-        mostrarMensaje("Falta capturar el folio.", "error");
-        return null;
-      }
-
-      if (!/^\d{4}$/.test(determinante)) {
-        mostrarMensaje("La determinante debe tener exactamente 4 números.", "error");
-        return null;
-      }
-
-      if (!fechaVenta) {
-        mostrarMensaje("Falta seleccionar la fecha de venta.", "error");
-        return null;
-      }
-
+    if (pandapeHoja === pandape) {
       return {
-        fecha_captura: new Date().toLocaleString("es-MX"),
-        codigo_barras: codigoBarras,
-        ultimos_4_tarjeta: ultimos4,
-        folio: folio,
-        determinante: determinante,
-        fecha_venta: fechaVenta,
-        comentarios: comentarios
+        encontrado: true,
+        pandape: pandapeHoja,
+        nombre_completo: nombreCompleto
       };
     }
+  }
 
-    function actualizarPreview(registro, incluirTarjeta = true) {
-      let texto = "";
+  return {
+    encontrado: false,
+    mensaje: "Pandape no encontrado"
+  };
+}
 
-      if (incluirTarjeta) {
-        texto =
-`FECHA CAPTURA: ${registro.fecha_captura}
-CÓDIGO DE BARRAS: ${registro.codigo_barras}
-ÚLTIMOS 4 TARJETA: ${registro.ultimos_4_tarjeta}
-FOLIO: ${registro.folio}
-DETERMINANTE: ${registro.determinante}
-FECHA DE VENTA: ${registro.fecha_venta}
-COMENTARIOS: ${registro.comentarios || "-"}`;
-      } else {
-        texto =
-`FECHA CAPTURA: ${registro.fecha_captura}
-CÓDIGO DE BARRAS: ${registro.codigo_barras}
-FOLIO: ${registro.folio}
-DETERMINANTE: ${registro.determinante}
-FECHA DE VENTA: ${registro.fecha_venta}
-COMENTARIOS: ${registro.comentarios || "-"}`;
-      }
+function doPost(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let hoja = ss.getSheetByName(NOMBRE_HOJA_CAPTURAS);
 
-      document.getElementById("preview").textContent = texto;
-      return texto;
-    }
+  if (!hoja) {
+    hoja = ss.insertSheet(NOMBRE_HOJA_CAPTURAS);
+  }
 
-    function guardarEnGoogleSheets() {
-      if (!SCRIPT_URL || SCRIPT_URL.includes("PEGA_AQUI")) {
-        mostrarMensaje("Falta pegar la URL de Apps Script en el código.", "error");
-        return;
-      }
+  prepararHojaCapturas(hoja);
 
-      const registro = validarFormulario();
-      if (!registro) return;
+  const p = e.parameter;
 
-      registroActual = registro;
-      actualizarPreview(registro, true);
+  const fechaArchivo = Utilities.formatDate(
+    new Date(),
+    "America/Mexico_City",
+    "yyyyMMdd_HHmmss"
+  );
 
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = SCRIPT_URL;
-      form.target = "iframeOculto";
-      form.style.display = "none";
+  const folio = limpiarNombreArchivo(p.folio || "SIN_FOLIO");
+  const pandape = limpiarNombreArchivo(p.pandape || "SIN_PANDAPE");
 
-      const campos = {
-        codigo_barras: registro.codigo_barras,
-        ultimos4: registro.ultimos_4_tarjeta,
-        folio: registro.folio,
-        determinante: registro.determinante,
-        fecha_venta: registro.fecha_venta,
-        comentarios: registro.comentarios
-      };
+  const urlQR = guardarImagenBase64(
+    p.evidencia_qr_base64 || "",
+    "QR_" + folio + "_" + pandape + "_" + fechaArchivo + ".jpg"
+  );
 
-      Object.keys(campos).forEach(nombre => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = nombre;
-        input.value = campos[nombre];
-        form.appendChild(input);
-      });
+  const urlCompra = guardarImagenBase64(
+    p.evidencia_compra_base64 || "",
+    "COMPRA_" + folio + "_" + pandape + "_" + fechaArchivo + ".jpg"
+  );
 
-      document.body.appendChild(form);
-      form.submit();
-      document.body.removeChild(form);
+  hoja.appendRow([
+    p.fecha_captura || new Date(),
+    p.pandape || "",
+    p.nombre_completo || "",
+    p.quien_registro || "",
+    p.codigo_barras || "",
+    p.ultimos4 || "",
+    p.folio || "",
+    p.determinante || "",
+    p.tienda || "",
+    p.fecha_venta || "",
+    p.comentarios || "",
+    urlQR,
+    urlCompra
+  ]);
 
-      mostrarMensaje("✅ Registro enviado a Google Sheets. Revisa la pestaña CAPTURAS.", "ok");
-    }
+  return ContentService.createTextOutput("OK");
+}
 
-    async function copiarRegistro() {
-      const registro = validarFormulario();
-      if (!registro) return;
+function prepararHojaCapturas(hoja) {
+  const encabezados = [
+    "FECHA_CAPTURA",
+    "PANDAPE",
+    "NOMBRE_COMPLETO",
+    "QUIEN_REGISTRO",
+    "CODIGO_BARRAS",
+    "ULTIMOS_4_TARJETA",
+    "FOLIO",
+    "DETERMINANTE",
+    "TIENDA",
+    "FECHA_VENTA",
+    "COMENTARIOS",
+    "LINK_EVIDENCIA_QR",
+    "LINK_EVIDENCIA_COMPRA_MENSUAL"
+  ];
 
-      registroActual = registro;
+  const primeraCelda = hoja.getRange(1, 1).getValue();
 
-      const textoSinTarjeta = actualizarPreview(registro, false);
+  if (!primeraCelda) {
+    hoja.getRange(1, 1, 1, encabezados.length).setValues([encabezados]);
+    hoja.setFrozenRows(1);
+    return;
+  }
 
-      try {
-        await navigator.clipboard.writeText(textoSinTarjeta);
-        mostrarMensaje("📋 Registro copiado sin últimos 4 de tarjeta.", "ok");
-      } catch (error) {
-        mostrarMensaje("No se pudo copiar. Selecciona el texto manualmente.", "error");
-      }
-    }
+  const filaActual = hoja.getRange(1, 1, 1, encabezados.length).getValues()[0];
+  const necesitaActualizar = encabezados.some((h, i) => filaActual[i] !== h);
 
-    function limpiarFormulario() {
-      detenerScanner();
+  if (necesitaActualizar) {
+    hoja.getRange(1, 1, 1, encabezados.length).setValues([encabezados]);
+    hoja.setFrozenRows(1);
+  }
+}
 
-      document.getElementById("codigoBarras").value = "";
-      document.getElementById("ultimos4").value = "";
-      document.getElementById("folio").value = "";
-      document.getElementById("determinante").value = "";
+function guardarImagenBase64(base64, nombreArchivo) {
+  if (!base64) return "";
 
-      const hoy = new Date().toISOString().split("T")[0];
-      document.getElementById("fechaVenta").value = hoy;
+  const partes = base64.split(",");
 
-      document.getElementById("comentarios").value = "";
+  if (partes.length < 2) return "";
 
-      registroActual = null;
+  const metadata = partes[0];
+  const contenido = partes[1];
 
-      document.getElementById("preview").textContent = "Aquí aparecerá el registro generado.";
-      mostrarMensaje("Lista para una nueva captura.", "ok");
-    }
-  </script>
-</body>
-</html>
+  const mimeMatch = metadata.match(/data:(.*);base64/);
+  const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+
+  const bytes = Utilities.base64Decode(contenido);
+  const blob = Utilities.newBlob(bytes, mimeType, nombreArchivo);
+
+  const carpeta = obtenerCarpetaEvidencias();
+  const archivo = carpeta.createFile(blob);
+
+  try {
+    archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (error) {
+    Logger.log("No se pudo cambiar permisos del archivo: " + error);
+  }
+
+  return archivo.getUrl();
+}
+
+function obtenerCarpetaEvidencias() {
+  const carpetas = DriveApp.getFoldersByName(NOMBRE_CARPETA_EVIDENCIAS);
+
+  if (carpetas.hasNext()) {
+    return carpetas.next();
+  }
+
+  return DriveApp.createFolder(NOMBRE_CARPETA_EVIDENCIAS);
+}
+
+function limpiarNombreArchivo(texto) {
+  return String(texto || "")
+    .trim()
+    .replace(/[^\w\-]/g, "_")
+    .substring(0, 80);
+}
+
+function normalizarTexto(texto) {
+  return String(texto || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
