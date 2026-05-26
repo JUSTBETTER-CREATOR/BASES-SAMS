@@ -4,92 +4,100 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Scanner Código de Barras</title>
+  <title>Registro Ejecutivo</title>
 
   <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
 
   <style>
     :root {
-      --bg: #f7efff;
+      --bg: #f3f4f6;
       --card: #ffffff;
-      --primary: #7b2cbf;
-      --primary-2: #9d4edd;
-      --secondary: #e0c3fc;
-      --text: #2b2b2b;
-      --muted: #666;
-      --border: #d6c7e8;
-      --ok: #0f8a4b;
-      --ok-bg: #e8f7ef;
-      --error: #b42318;
-      --error-bg: #fdecec;
-      --info: #173b5c;
-      --info-bg: #eef6ff;
+      --primary: #111827;
+      --primary-2: #1f2937;
+      --accent: #b08d57;
+      --accent-soft: #f5efe5;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --ok: #047857;
+      --ok-bg: #ecfdf5;
+      --error: #b91c1c;
+      --error-bg: #fef2f2;
+      --info: #1d4ed8;
+      --info-bg: #eff6ff;
     }
 
     * { box-sizing: border-box; }
 
     body {
-      font-family: Arial, sans-serif;
-      background: var(--bg);
       margin: 0;
       padding: 18px;
+      background: var(--bg);
       color: var(--text);
+      font-family: Arial, sans-serif;
     }
 
     .contenedor {
-      max-width: 580px;
+      max-width: 620px;
       margin: auto;
       background: var(--card);
-      padding: 22px;
-      border-radius: 22px;
-      box-shadow: 0 10px 28px rgba(0,0,0,0.14);
+      padding: 24px;
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(17, 24, 39, 0.12);
+      border: 1px solid #e5e7eb;
     }
 
     h1 {
       text-align: center;
+      margin: 0;
       color: var(--primary);
-      margin-bottom: 5px;
+      font-size: 26px;
+      letter-spacing: 0.3px;
     }
 
     .subtitulo {
       text-align: center;
-      color: #555;
+      color: var(--muted);
       font-size: 14px;
+      margin-top: 8px;
       margin-bottom: 18px;
       line-height: 1.4;
     }
 
     .seccion {
-      background: #fff;
-      border: 1px solid #eadff7;
-      border-radius: 18px;
-      padding: 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 16px;
       margin-top: 14px;
+      background: #fff;
     }
 
-    video {
-      width: 100%;
-      border-radius: 16px;
-      background: #000;
-      margin-top: 12px;
-      display: none;
+    .titulo-seccion {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--primary);
+      border-left: 4px solid var(--accent);
+      padding-left: 8px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
     }
 
     label {
       display: block;
-      margin-top: 14px;
+      margin-top: 12px;
       font-weight: bold;
-      color: #3c096c;
+      font-size: 14px;
+      color: var(--primary-2);
     }
 
     input, textarea, select {
       width: 100%;
       padding: 13px;
       margin-top: 6px;
-      border: 1px solid #cfcfcf;
-      border-radius: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
       font-size: 16px;
-      box-sizing: border-box;
       outline: none;
       background: #fff;
     }
@@ -97,17 +105,17 @@
     input:focus,
     textarea:focus,
     select:focus {
-      border-color: var(--primary-2);
-      box-shadow: 0 0 0 3px rgba(157, 78, 221, 0.15);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(176, 141, 87, 0.16);
     }
 
     input[readonly] {
-      background: #f7f7f7;
-      color: #555;
+      background: #f9fafb;
+      color: #4b5563;
     }
 
     textarea {
-      min-height: 85px;
+      min-height: 80px;
       resize: vertical;
     }
 
@@ -116,41 +124,83 @@
       padding: 14px;
       margin-top: 12px;
       border: none;
-      border-radius: 14px;
-      font-size: 16px;
+      border-radius: 10px;
+      font-size: 15px;
       font-weight: bold;
       cursor: pointer;
+      letter-spacing: 0.2px;
     }
 
     .btn-principal {
-      background: var(--primary-2);
-      color: white;
+      background: var(--primary);
+      color: #fff;
     }
 
     .btn-secundario {
-      background: var(--secondary);
-      color: #3c096c;
+      background: var(--accent-soft);
+      color: #4b3621;
+      border: 1px solid #e3d2b8;
     }
 
-    .btn-error {
-      background: #ffccd5;
-      color: #9d0208;
+    .btn-claro {
+      background: #f9fafb;
+      color: var(--primary);
+      border: 1px solid var(--border);
+    }
+
+    video {
+      width: 100%;
+      border-radius: 14px;
+      background: #000;
+      margin-top: 12px;
+      display: none;
     }
 
     .mensaje {
-      margin-top: 12px;
+      margin-top: 14px;
       text-align: center;
       font-weight: bold;
       min-height: 24px;
     }
 
     .ok { color: var(--ok); }
-    .error { color: #d00000; }
+    .error { color: var(--error); }
+
+    .info-box {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: bold;
+      display: none;
+      line-height: 1.4;
+    }
+
+    .ok-box {
+      display: block;
+      background: var(--ok-bg);
+      border: 1px solid #a7f3d0;
+      color: var(--ok);
+    }
+
+    .error-box {
+      display: block;
+      background: var(--error-bg);
+      border: 1px solid #fecaca;
+      color: var(--error);
+    }
+
+    .info-box-visible {
+      display: block;
+      background: var(--info-bg);
+      border: 1px solid #bfdbfe;
+      color: var(--info);
+    }
 
     .preview {
-      background: #faf7ff;
-      border: 1px dashed #b185db;
-      border-radius: 14px;
+      background: #f9fafb;
+      border: 1px dashed #9ca3af;
+      border-radius: 12px;
       padding: 12px;
       margin-top: 18px;
       font-size: 14px;
@@ -165,44 +215,9 @@
       line-height: 1.4;
     }
 
-    .info-box {
-      margin-top: 8px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: bold;
-      display: none;
-    }
-
-    .ok-box {
-      display: block;
-      background: var(--ok-bg);
-      border: 1px solid #b8e7ca;
-      color: var(--ok);
-    }
-
-    .error-box {
-      display: block;
-      background: var(--error-bg);
-      border: 1px solid #f5b4ae;
-      color: var(--error);
-    }
-
-    .info-box-visible {
-      display: block;
-      background: var(--info-bg);
-      border: 1px solid #cfe4fb;
-      color: var(--info);
-    }
-
-    .archivo {
-      background: #faf7ff;
-      border: 1px solid #eadff7;
-    }
-
     .resultado-usuario {
-      background: #faf7ff;
-      border: 1px solid #eadff7;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
       border-radius: 12px;
       padding: 10px;
       margin-top: 8px;
@@ -210,29 +225,39 @@
     }
 
     .opcion-usuario {
-      background: #f1dcff;
-      color: #3c096c;
+      background: #fff;
+      color: var(--primary);
       padding: 10px;
       border-radius: 10px;
       margin-top: 8px;
       cursor: pointer;
       font-weight: bold;
+      border: 1px solid #d1d5db;
     }
 
-    .oculto {
-      display: none;
+    .opcion-usuario:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .oculto { display: none; }
+
+    .archivo {
+      background: #f9fafb;
     }
   </style>
 </head>
 
 <body>
   <div class="contenedor">
-    <h1>📷 Scanner</h1>
+    <h1>Registro Ejecutivo</h1>
     <p class="subtitulo">
-      Escanea código de barras, registra datos, valida usuarios y guarda evidencias en Google Sheets.
+      Escaneo de código de barras, validación de usuario, evidencias y registro automático en Google Sheets.
     </p>
 
     <div class="seccion">
+      <div class="titulo-seccion">Usuario que registra</div>
+
       <label>Pandape de quien registra</label>
       <input
         id="pandapeRegistra"
@@ -242,24 +267,34 @@
 
       <div id="infoPandapeRegistra" class="info-box"></div>
 
-      <label>Nombre completo de quien registra</label>
+      <label>Si no tienes Pandape, busca por nombre completo</label>
+      <input
+        id="busquedaNombreRegistra"
+        placeholder="Empieza por apellidos. Ej. SANCHEZ CABALLERO MARIELA"
+      />
+
+      <button class="btn-secundario" onclick="buscarRegistraPorNombre()">
+        Buscar quien registra por nombre
+      </button>
+
+      <div id="resultadosRegistra" class="resultado-usuario"></div>
+
+      <label>Nombre completo validado</label>
       <input
         id="nombreRegistra"
-        placeholder="Aquí aparecerá el nombre automáticamente"
+        placeholder="Aquí aparecerá el nombre validado"
         readonly
       />
     </div>
 
     <div class="seccion">
+      <div class="titulo-seccion">Código de barras</div>
+
       <button class="btn-principal" onclick="iniciarScanner()">
         Abrir cámara y escanear
       </button>
 
       <video id="video" playsinline></video>
-
-      <button class="btn-error" onclick="marcarErroneo()">
-        No se pudo escanear / Marcar ERRÓNEO
-      </button>
 
       <label>Código de barras detectado</label>
       <input id="codigoBarras" placeholder="Aquí aparecerán los dígitos o ERRÓNEO" readonly />
@@ -273,9 +308,15 @@
       <button class="btn-secundario" onclick="agregarCodigoManual()">
         Agregar código manual
       </button>
+
+      <div class="nota">
+        Si el sistema no logra leer el código después de unos segundos, se marcará automáticamente como ERRÓNEO.
+      </div>
     </div>
 
     <div class="seccion">
+      <div class="titulo-seccion">Datos de venta</div>
+
       <label>Últimos 4 dígitos de tarjeta</label>
       <input
         id="ultimos4"
@@ -299,10 +340,17 @@
         inputmode="numeric"
         maxlength="4"
         placeholder="Solo 4 números. Ej. 0013"
-        oninput="soloNumeros(this, 4)"
+        oninput="validarDeterminanteManual()"
       />
 
-      <div class="nota">La determinante debe tener exactamente 4 números.</div>
+      <div id="infoDeterminante" class="info-box"></div>
+
+      <label>Nombre de determinante</label>
+      <input
+        id="nombreDeterminante"
+        placeholder="Aquí aparecerá el nombre de la determinante"
+        readonly
+      />
 
       <label>Fecha de venta</label>
       <input id="fechaVenta" type="date" />
@@ -312,6 +360,8 @@
     </div>
 
     <div class="seccion">
+      <div class="titulo-seccion">Evidencias obligatorias</div>
+
       <label>Evidencia QR</label>
       <input
         id="evidenciaQR"
@@ -319,7 +369,6 @@
         type="file"
         accept="image/*"
       />
-      <div class="nota">Puedes subir foto desde galería o tomar foto en el momento, según el celular.</div>
 
       <label>Evidencia Compra Mensual</label>
       <input
@@ -328,10 +377,13 @@
         type="file"
         accept="image/*"
       />
+
       <div class="nota">Puedes subir foto desde galería o tomar foto en el momento, según el celular.</div>
     </div>
 
     <div class="seccion">
+      <div class="titulo-seccion">P0 / Cerrador</div>
+
       <label>¿Es P0?</label>
       <select id="p0" onchange="toggleP0()">
         <option value="NO">NO</option>
@@ -369,15 +421,42 @@
       </div>
     </div>
 
+    <div class="seccion">
+      <div class="titulo-seccion">Ahorra Más / Programa Cero Físico</div>
+
+      <label>¿AHORRA MAS / PROGRAMA CERO FÍSICO?</label>
+      <select id="programaFisico" onchange="toggleProgramaFisico()">
+        <option value="NO">NO</option>
+        <option value="SI">SÍ</option>
+      </select>
+
+      <div id="seccionProgramaFisico" class="oculto">
+        <label>Selecciona el tipo</label>
+        <select id="tipoProgramaFisico">
+          <option value="">Selecciona una opción</option>
+          <option value="AHORRA MAS">AHORRA MAS</option>
+          <option value="PROGRAMA 0">PROGRAMA 0</option>
+        </select>
+
+        <label>Foto de Ahorra Más / Programa 0</label>
+        <input
+          id="evidenciaProgramaFisico"
+          class="archivo"
+          type="file"
+          accept="image/*"
+        />
+      </div>
+    </div>
+
     <button class="btn-principal" onclick="guardarEnGoogleSheets()">
       Guardar en Google Sheets
     </button>
 
-    <button class="btn-secundario" onclick="copiarRegistro()">
+    <button class="btn-claro" onclick="copiarRegistro()">
       Copiar registro sin tarjeta
     </button>
 
-    <button class="btn-secundario" onclick="limpiarFormulario()">
+    <button class="btn-claro" onclick="limpiarFormulario()">
       Nueva captura
     </button>
 
@@ -391,7 +470,7 @@
   <iframe name="iframeOculto" style="display:none;"></iframe>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySJ8cUN6zVfFRBjLeY_4JPyyTPyeCIxXSZMXMvRbyvsmQsiWxUT7ma8VLg2lwTC4ol_Q/exec";
+    const SCRIPT_URL = "PEGA_AQUI_TU_URL_EXEC";
 
     const codeReader = new ZXing.BrowserMultiFormatReader();
 
@@ -400,13 +479,16 @@
 
     let usuarioRegistra = null;
     let cerradorSeleccionado = null;
+    let determinanteValidada = null;
 
     let timerRegistra = null;
     let timerCerrador = null;
+    let timerDeterminante = null;
 
     document.addEventListener("DOMContentLoaded", function () {
       ponerFechaHoy();
       toggleP0();
+      toggleProgramaFisico();
     });
 
     function fechaHoyLocal() {
@@ -465,6 +547,19 @@
       }
     }
 
+    function toggleProgramaFisico() {
+      const valor = document.getElementById("programaFisico").value;
+      const seccion = document.getElementById("seccionProgramaFisico");
+
+      if (valor === "SI") {
+        seccion.classList.remove("oculto");
+      } else {
+        seccion.classList.add("oculto");
+        document.getElementById("tipoProgramaFisico").value = "";
+        document.getElementById("evidenciaProgramaFisico").value = "";
+      }
+    }
+
     function consultarAppsScript(params) {
       return new Promise((resolve, reject) => {
         const callbackName = "callback_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
@@ -519,6 +614,13 @@
       });
     }
 
+    async function buscarDeterminante(valor) {
+      return consultarAppsScript({
+        accion: "buscar_determinante",
+        valor: valor
+      });
+    }
+
     function validarPandapeRegistra() {
       const input = document.getElementById("pandapeRegistra");
       const nombre = document.getElementById("nombreRegistra");
@@ -550,7 +652,7 @@
           if (!respuesta || !respuesta.encontrado) {
             usuarioRegistra = null;
             nombre.value = "";
-            mostrarCaja("infoPandapeRegistra", "PANDAPE NO ENCONTRADO", "error-box");
+            mostrarCaja("infoPandapeRegistra", "PANDAPE NO ENCONTRADO. Puedes buscar por nombre.", "error-box");
             return;
           }
 
@@ -569,6 +671,62 @@
           mostrarCaja("infoPandapeRegistra", "No se pudo consultar el Pandape.", "error-box");
         }
       }, 500);
+    }
+
+    async function buscarRegistraPorNombre() {
+      const nombreBuscado = document.getElementById("busquedaNombreRegistra").value.trim();
+      const contenedor = document.getElementById("resultadosRegistra");
+
+      contenedor.innerHTML = "";
+      contenedor.style.display = "none";
+
+      if (nombreBuscado.length < 4) {
+        mostrarMensaje("Escribe más letras del nombre empezando por apellidos.", "error");
+        return;
+      }
+
+      mostrarMensaje("Buscando usuario por nombre...", "");
+
+      try {
+        const respuesta = await buscarUsuarioPorNombre(nombreBuscado);
+
+        if (!respuesta || !respuesta.resultados || respuesta.resultados.length === 0) {
+          usuarioRegistra = null;
+          document.getElementById("nombreRegistra").value = "";
+          mostrarMensaje("Su nombre no existe, pon uno válido.", "error");
+          return;
+        }
+
+        contenedor.style.display = "block";
+        contenedor.innerHTML = "<strong>Selecciona tu nombre correcto:</strong>";
+
+        respuesta.resultados.forEach(usuario => {
+          const div = document.createElement("div");
+          div.className = "opcion-usuario";
+          div.textContent = `${usuario.nombre_completo} — ${usuario.pandape || "SIN PANDAPE"}`;
+
+          div.onclick = function () {
+            usuarioRegistra = {
+              pandape: usuario.pandape || "",
+              nombre_completo: usuario.nombre_completo
+            };
+
+            document.getElementById("pandapeRegistra").value = usuario.pandape || "";
+            document.getElementById("nombreRegistra").value = usuario.nombre_completo;
+            contenedor.innerHTML = "";
+            contenedor.style.display = "none";
+
+            mostrarMensaje("✅ Usuario seleccionado correctamente.", "ok");
+            mostrarCaja("infoPandapeRegistra", "Usuario seleccionado correctamente.", "ok-box");
+          };
+
+          contenedor.appendChild(div);
+        });
+
+      } catch (error) {
+        console.error(error);
+        mostrarMensaje("No se pudo buscar el nombre en usuarios.", "error");
+      }
     }
 
     function validarPandapeCerrador() {
@@ -679,6 +837,59 @@
       }
     }
 
+    function validarDeterminanteManual() {
+      const input = document.getElementById("determinante");
+      const nombreDeterminante = document.getElementById("nombreDeterminante");
+
+      input.value = input.value.replace(/\D/g, "").slice(0, 4);
+
+      determinanteValidada = null;
+      nombreDeterminante.value = "";
+
+      const determinante = input.value.trim();
+
+      if (!determinante) {
+        limpiarCaja("infoDeterminante");
+        return;
+      }
+
+      if (determinante.length < 4) {
+        mostrarCaja("infoDeterminante", "Captura los 4 números de la determinante.", "info-box-visible");
+        return;
+      }
+
+      clearTimeout(timerDeterminante);
+
+      timerDeterminante = setTimeout(async () => {
+        mostrarCaja("infoDeterminante", "Buscando determinante...", "info-box-visible");
+
+        try {
+          const respuesta = await buscarDeterminante(determinante);
+
+          if (!respuesta || !respuesta.encontrado) {
+            determinanteValidada = null;
+            nombreDeterminante.value = "";
+            mostrarCaja("infoDeterminante", "DETERMINANTE NO ENCONTRADA", "error-box");
+            return;
+          }
+
+          determinanteValidada = {
+            determinante: respuesta.determinante,
+            nombre: respuesta.nombre
+          };
+
+          nombreDeterminante.value = respuesta.nombre;
+          mostrarCaja("infoDeterminante", "Determinante encontrada correctamente.", "ok-box");
+
+        } catch (error) {
+          console.error(error);
+          determinanteValidada = null;
+          nombreDeterminante.value = "";
+          mostrarCaja("infoDeterminante", "No se pudo consultar la determinante.", "error-box");
+        }
+      }, 500);
+    }
+
     async function iniciarScanner() {
       const video = document.getElementById("video");
       const codigoBarras = document.getElementById("codigoBarras");
@@ -692,8 +903,7 @@
         const dispositivos = await codeReader.listVideoInputDevices();
 
         if (!dispositivos || dispositivos.length === 0) {
-          mostrarMensaje("No se encontró cámara. Se marcará como ERRÓNEO.", "error");
-          codigoBarras.value = "ERRÓNEO";
+          mostrarMensaje("No se encontró cámara.", "error");
           return;
         }
 
@@ -710,7 +920,7 @@
           if (!detectado) {
             detenerScanner();
             codigoBarras.value = "ERRÓNEO";
-            mostrarMensaje("No se pudo escanear. Código marcado como ERRÓNEO.", "error");
+            mostrarMensaje("No se pudo detectar el código de barras. Se marcó como ERRÓNEO.", "error");
           }
         }, 15000);
 
@@ -749,12 +959,6 @@
       } catch (error) {
         console.error(error);
       }
-    }
-
-    function marcarErroneo() {
-      detenerScanner();
-      document.getElementById("codigoBarras").value = "ERRÓNEO";
-      mostrarMensaje("Código marcado como ERRÓNEO.", "error");
     }
 
     function agregarCodigoManual() {
@@ -831,24 +1035,23 @@
       const ultimos4 = document.getElementById("ultimos4").value.trim();
       const folio = document.getElementById("folio").value.trim();
       const determinante = document.getElementById("determinante").value.trim();
+      const nombreDeterminante = document.getElementById("nombreDeterminante").value.trim();
       const fechaVenta = document.getElementById("fechaVenta").value;
       const comentarios = document.getElementById("comentarios").value.trim();
       const evidenciaQR = document.getElementById("evidenciaQR").files[0];
       const evidenciaCompra = document.getElementById("evidenciaCompra").files[0];
       const p0 = document.getElementById("p0").value;
-
-      if (!pandapeRegistra) {
-        mostrarMensaje("Falta capturar el Pandape de quien registra.", "error");
-        return null;
-      }
+      const programaFisico = document.getElementById("programaFisico").value;
+      const tipoProgramaFisico = document.getElementById("tipoProgramaFisico").value;
+      const evidenciaProgramaFisico = document.getElementById("evidenciaProgramaFisico").files[0];
 
       if (!usuarioRegistra || !nombreRegistra) {
-        mostrarMensaje("El Pandape de quien registra no está validado o no fue encontrado.", "error");
+        mostrarMensaje("Debes validar quien registra por Pandape o por nombre.", "error");
         return null;
       }
 
       if (!codigoBarras) {
-        mostrarMensaje("Falta escanear el código, agregarlo manual o marcarlo como ERRÓNEO.", "error");
+        mostrarMensaje("Falta escanear el código o agregarlo manual.", "error");
         return null;
       }
 
@@ -864,6 +1067,11 @@
 
       if (!/^\d{4}$/.test(determinante)) {
         mostrarMensaje("La determinante debe tener exactamente 4 números.", "error");
+        return null;
+      }
+
+      if (!determinanteValidada || !nombreDeterminante) {
+        mostrarMensaje("La determinante no está validada o no fue encontrada.", "error");
         return null;
       }
 
@@ -887,19 +1095,34 @@
         return null;
       }
 
+      if (programaFisico === "SI") {
+        if (!tipoProgramaFisico) {
+          mostrarMensaje("Selecciona AHORRA MAS o PROGRAMA 0.", "error");
+          return null;
+        }
+
+        if (!evidenciaProgramaFisico) {
+          mostrarMensaje("Falta subir la foto de Ahorra Más / Programa 0.", "error");
+          return null;
+        }
+      }
+
       return {
         fecha_captura: new Date().toLocaleString("es-MX"),
-        pandape_registra: pandapeRegistra,
-        nombre_registra: nombreRegistra,
+        pandape_registra: usuarioRegistra.pandape || pandapeRegistra || "",
+        nombre_registra: usuarioRegistra.nombre_completo,
         codigo_barras: codigoBarras,
         ultimos_4_tarjeta: ultimos4,
         folio: folio,
         determinante: determinante,
+        nombre_determinante: nombreDeterminante,
         fecha_venta: fechaVenta,
         comentarios: comentarios,
         p0: p0,
         cerrador_pandape: p0 === "SI" ? (cerradorSeleccionado.pandape || "") : "",
-        cerrador_nombre: p0 === "SI" ? (cerradorSeleccionado.nombre_completo || "") : ""
+        cerrador_nombre: p0 === "SI" ? (cerradorSeleccionado.nombre_completo || "") : "",
+        programa_fisico: programaFisico,
+        tipo_programa_fisico: programaFisico === "SI" ? tipoProgramaFisico : ""
       };
     }
 
@@ -909,29 +1132,35 @@
       if (incluirTarjeta) {
         texto =
 `FECHA CAPTURA: ${registro.fecha_captura}
-PANDAPE REGISTRA: ${registro.pandape_registra}
+PANDAPE REGISTRA: ${registro.pandape_registra || "-"}
 NOMBRE REGISTRA: ${registro.nombre_registra}
 CÓDIGO DE BARRAS: ${registro.codigo_barras}
 ÚLTIMOS 4 TARJETA: ${registro.ultimos_4_tarjeta}
 FOLIO: ${registro.folio}
 DETERMINANTE: ${registro.determinante}
+NOMBRE DETERMINANTE: ${registro.nombre_determinante}
 FECHA DE VENTA: ${registro.fecha_venta}
 P0: ${registro.p0}
 CERRADOR PANDAPE: ${registro.cerrador_pandape || "-"}
 CERRADOR NOMBRE: ${registro.cerrador_nombre || "-"}
+AHORRA MAS / PROGRAMA CERO FÍSICO: ${registro.programa_fisico}
+TIPO PROGRAMA FÍSICO: ${registro.tipo_programa_fisico || "-"}
 COMENTARIOS: ${registro.comentarios || "-"}`;
       } else {
         texto =
 `FECHA CAPTURA: ${registro.fecha_captura}
-PANDAPE REGISTRA: ${registro.pandape_registra}
+PANDAPE REGISTRA: ${registro.pandape_registra || "-"}
 NOMBRE REGISTRA: ${registro.nombre_registra}
 CÓDIGO DE BARRAS: ${registro.codigo_barras}
 FOLIO: ${registro.folio}
 DETERMINANTE: ${registro.determinante}
+NOMBRE DETERMINANTE: ${registro.nombre_determinante}
 FECHA DE VENTA: ${registro.fecha_venta}
 P0: ${registro.p0}
 CERRADOR PANDAPE: ${registro.cerrador_pandape || "-"}
 CERRADOR NOMBRE: ${registro.cerrador_nombre || "-"}
+AHORRA MAS / PROGRAMA CERO FÍSICO: ${registro.programa_fisico}
+TIPO PROGRAMA FÍSICO: ${registro.tipo_programa_fisico || "-"}
 COMENTARIOS: ${registro.comentarios || "-"}`;
       }
 
@@ -956,6 +1185,7 @@ COMENTARIOS: ${registro.comentarios || "-"}`;
       try {
         const evidenciaQRBase64 = await archivoAImagenBase64(document.getElementById("evidenciaQR"));
         const evidenciaCompraBase64 = await archivoAImagenBase64(document.getElementById("evidenciaCompra"));
+        const evidenciaProgramaBase64 = await archivoAImagenBase64(document.getElementById("evidenciaProgramaFisico"));
 
         const form = document.createElement("form");
         form.method = "POST";
@@ -971,13 +1201,17 @@ COMENTARIOS: ${registro.comentarios || "-"}`;
           ultimos4: registro.ultimos_4_tarjeta,
           folio: registro.folio,
           determinante: registro.determinante,
+          nombre_determinante: registro.nombre_determinante,
           fecha_venta: registro.fecha_venta,
           comentarios: registro.comentarios,
           p0: registro.p0,
           cerrador_pandape: registro.cerrador_pandape,
           cerrador_nombre: registro.cerrador_nombre,
+          programa_fisico: registro.programa_fisico,
+          tipo_programa_fisico: registro.tipo_programa_fisico,
           evidencia_qr_base64: evidenciaQRBase64,
-          evidencia_compra_base64: evidenciaCompraBase64
+          evidencia_compra_base64: evidenciaCompraBase64,
+          evidencia_programa_base64: evidenciaProgramaBase64
         };
 
         Object.keys(campos).forEach(nombre => {
@@ -1020,12 +1254,14 @@ COMENTARIOS: ${registro.comentarios || "-"}`;
       detenerScanner();
 
       document.getElementById("pandapeRegistra").value = "";
+      document.getElementById("busquedaNombreRegistra").value = "";
       document.getElementById("nombreRegistra").value = "";
       document.getElementById("codigoBarras").value = "";
       document.getElementById("codigoManual").value = "";
       document.getElementById("ultimos4").value = "";
       document.getElementById("folio").value = "";
       document.getElementById("determinante").value = "";
+      document.getElementById("nombreDeterminante").value = "";
       document.getElementById("evidenciaQR").value = "";
       document.getElementById("evidenciaCompra").value = "";
       document.getElementById("comentarios").value = "";
@@ -1037,15 +1273,25 @@ COMENTARIOS: ${registro.comentarios || "-"}`;
       document.getElementById("resultadosCerrador").style.display = "none";
       document.getElementById("resultadosCerrador").innerHTML = "";
 
+      document.getElementById("programaFisico").value = "NO";
+      document.getElementById("tipoProgramaFisico").value = "";
+      document.getElementById("evidenciaProgramaFisico").value = "";
+
+      document.getElementById("resultadosRegistra").style.display = "none";
+      document.getElementById("resultadosRegistra").innerHTML = "";
+
       ponerFechaHoy();
       toggleP0();
+      toggleProgramaFisico();
 
       usuarioRegistra = null;
       cerradorSeleccionado = null;
+      determinanteValidada = null;
       registroActual = null;
 
       limpiarCaja("infoPandapeRegistra");
       limpiarCaja("infoPandapeCerrador");
+      limpiarCaja("infoDeterminante");
 
       document.getElementById("preview").textContent = "Aquí aparecerá el registro generado.";
       mostrarMensaje("Lista para una nueva captura.", "ok");
